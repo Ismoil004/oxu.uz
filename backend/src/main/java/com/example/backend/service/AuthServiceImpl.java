@@ -26,7 +26,6 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
 
     private static final String JWT_SECRET = "your-256-bit-secret-your-256-bit-secret";
-
     @Override
     public HttpEntity<?> login(String username, String password) {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
@@ -34,7 +33,21 @@ public class AuthServiceImpl implements AuthService {
 
         String accessToken = jwtService.generateJwtToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
-        return ResponseEntity.ok(Map.of("access_token", accessToken, "refresh_token", refreshToken));
+
+        // Create a response with both tokens and user data
+        Map<String, Object> response = new HashMap<>();
+        response.put("access_token", accessToken);
+        response.put("refresh_token", refreshToken);
+        response.put("user", Map.of(
+                "id", user.getUuid(),
+                "firstName", user.getFirstName(),
+                "lastName", user.getLastName(),
+                "username", user.getUsername(),
+                "department", user.getDepartment(),
+                "position", user.getPosition()
+        ));
+
+        return ResponseEntity.ok(response);
     }
     @Override public HttpEntity<?> register(RegisterDto dto)
     { if (userRepo.existsByUsername(dto.getUsername()))

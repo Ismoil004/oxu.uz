@@ -2,6 +2,8 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.AuthDto;
 import com.example.backend.dto.RegisterDto;
+import com.example.backend.entity.Users;
+import com.example.backend.repo.UserRepo;
 import com.example.backend.service.AuthService;
 import com.example.backend.service.JwtService;
 import io.jsonwebtoken.Claims;
@@ -10,11 +12,15 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.crypto.SecretKey;
 
 import org.springframework.http.ResponseEntity;
+
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -23,7 +29,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtService jwtService;
-
+     private final UserRepo userRepo;
     private static final String JWT_SECRET = "your-256-bit-secret-your-256-bit-secret"; // This should be a base64 encoded string
 
     @PostMapping("/login")

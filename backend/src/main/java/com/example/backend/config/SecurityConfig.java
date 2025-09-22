@@ -36,6 +36,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.GET,"/api/auth/refresh","api/auth/test","api/auth/token").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/api/bino","/api/bino/{binoId}","/api/bino/{binoId}/floor/{floorId}","/api/bino/{binoId}/floor/{floorId}/rooms").permitAll()
                         .requestMatchers(HttpMethod.POST,"/api/auth/login","/api/auth/register").permitAll()
                                 .anyRequest().authenticated()
                 )
