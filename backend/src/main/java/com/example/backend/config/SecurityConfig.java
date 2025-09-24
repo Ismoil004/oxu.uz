@@ -35,9 +35,18 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET,"/api/auth/refresh","api/auth/test","api/auth/token").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/api/auth/refresh","api/auth/test","api/auth/token","/api/auth/user").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/bino","/api/bino/{binoId}","/api/bino/{binoId}/floor/{floorId}","/api/bino/{binoId}/floor/{floorId}/rooms").permitAll()
                         .requestMatchers(HttpMethod.POST,"/api/auth/login","/api/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/api/problems/statistics","/api/problems/active",
+                                "/api/problems/floor/{floorId}","/api/problems/room/{roomId}",
+                                "/api/problems/status/{status}",
+                                "/api/problems","/api/problems/room/{roomId}/with-problems",
+                                "/api/problems/room/{roomId}/problem-types","/api/problems/room/{roomId}/problem-type/{problemType}",
+                                "/api/problems/technician/{technicianId}","/api/problems/technician/{technicianId}/status/{status}",
+                                "/api/problems/statistics/counts","/api/problems/statistics/completed-by-technician","/api/problems/statistics/today-completed").permitAll()
+                        .requestMatchers(HttpMethod.PATCH,"/api/problems/{problemId}/status").permitAll()
+                        .requestMatchers(HttpMethod.POST,"/api/problems","/api/problems/room/{roomId}/selected-problems").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .addFilterBefore(myFilter, UsernamePasswordAuthenticationFilter.class);

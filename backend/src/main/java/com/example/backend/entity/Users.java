@@ -5,6 +5,7 @@ import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +31,17 @@ public class Users implements UserDetails {
 
     @ManyToMany(fetch = FetchType.EAGER)
     private List<Role> roles;
+    // User ga tegishli reported problems
+    @OneToMany(mappedBy = "reportedBy", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Problem> reportedProblems = new ArrayList<>();
+
+    // User ga tegishli resolved problems
+    @OneToMany(mappedBy = "resolvedBy", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Problem> resolvedProblems = new ArrayList<>();
+
+    // User ga assign qilingan problems
+    @OneToMany(mappedBy = "assignedTo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Problem> assignedProblems = new ArrayList<>();
 
     public Users(String username, String password, List<Role> roles) {
         this.username = username;

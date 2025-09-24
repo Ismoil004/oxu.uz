@@ -31,7 +31,25 @@ public class AuthController {
     private final JwtService jwtService;
      private final UserRepo userRepo;
     private static final String JWT_SECRET = "your-256-bit-secret-your-256-bit-secret"; // This should be a base64 encoded string
+    @GetMapping("/user")
+    public ResponseEntity<?> getUser(@RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            // Tokenni olish
+            String token = AuthUtils.extractTokenFromHeader(authorizationHeader);
 
+            // JWT dan username (yoki id) ni chiqarib olish
+            String username = jwtService.extractUsername(token);
+
+            // Bazadan foydalanuvchini topish
+            Users user = userRepo.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            return ResponseEntity.ok(user);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token: " + e.getMessage());
+        }
+    }
     @PostMapping("/login")
     public HttpEntity<?> loginUser(@Valid @RequestBody AuthDto dto) {
         return authService.login(dto.getUsername(), dto.getPassword());

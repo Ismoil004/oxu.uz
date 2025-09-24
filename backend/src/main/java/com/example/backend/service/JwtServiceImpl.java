@@ -1,6 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.Users;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -12,6 +13,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+
 @Service
 @RequiredArgsConstructor
 public class JwtServiceImpl implements JwtService {
@@ -21,7 +23,13 @@ public class JwtServiceImpl implements JwtService {
         byte[] decode = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(decode);
     }
-
+    public String extractUsername(String token) {
+        Claims claims = Jwts.parser()
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.getSubject(); // subject = username
+    }
     @Override
     public String generateJwtToken(Users user) {
         Map<String, String> claims = new HashMap<>();
