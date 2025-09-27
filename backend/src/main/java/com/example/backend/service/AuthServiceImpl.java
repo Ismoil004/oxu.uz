@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.example.backend.dto.RegisterDto;
 import com.example.backend.entity.Users;
+import com.example.backend.enums.Status; // Import qo'shing
 import com.example.backend.repo.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -13,9 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.web.client.RestTemplate;
-
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -25,11 +23,26 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    private static final String JWT_SECRET = "your-256-bit-secret-your-256-bit-secret";
     @Override
     public HttpEntity<?> login(String username, String password) {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
         Users user = userRepo.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Foydalanuvchi statusini tekshirish
+        if (user.getStatus().equals(Status.PENDING.name())) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Foydalanuvchi tasdiqlanmagan. Administrator tasdiqlashini kuting.");
+            response.put("requiresApproval", true);
+            return ResponseEntity.status(403).body(response);
+        }
+
+        if (user.getStatus().equals(Status.REJECTED.name())) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Foydalanuvchi rad etilgan. Qayta ro'yxatdan o'ting.");
+            return ResponseEntity.status(403).body(response);
+        }
 
         String accessToken = jwtService.generateJwtToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
@@ -44,24 +57,56 @@ public class AuthServiceImpl implements AuthService {
                 "lastName", user.getLastName(),
                 "username", user.getUsername(),
                 "department", user.getDepartment(),
-                "position", user.getPosition()
+                "position", user.getPosition(),
+                "status", user.getStatus()
         ));
 
         return ResponseEntity.ok(response);
     }
-    @Override public HttpEntity<?> register(RegisterDto dto)
-    { if (userRepo.existsByUsername(dto.getUsername()))
-    { return ResponseEntity.badRequest().body("Bunday login mavjud!"); }
-        Users user = Users.builder() .firstName(dto.getFirstName()) .lastName(dto.getLastName()) .department(dto.getDepartment()) .position(dto.getPosition()) .username(dto.getUsername()) .password(passwordEncoder.encode(dto.getPassword())) .build(); userRepo.save(user); return ResponseEntity.ok("Foydalanuvchi muvaffaqiyatli ro'yxatdan o'tdi!"); }
+
+    @Override
+    public HttpEntity<?> register(RegisterDto dto) {
+        if (userRepo.existsByUsername(dto.getUsername())) {
+            return ResponseEntity.badRequest().body("Bunday login mavjud!");
+        }
+
+        // Statusni avtomatik belgilash: texnik yoki atm bo'limi uchun PENDING, qolganlari uchun ACTIVE
+        Status status;
+        String department = dto.getDepartment().toLowerCase();
+
+        if ("texnik".equals(department) || "atm".equals(department)) {
+            status = Status.PENDING;
+        } else {
+            status = Status.ACTIVE;
+        }
+
+        Users user = Users.builder()
+                .firstName(dto.getFirstName())
+                .lastName(dto.getLastName())
+                .department(dto.getDepartment())
+                .position(dto.getPosition())
+                .username(dto.getUsername())
+                .password(passwordEncoder.encode(dto.getPassword()))
+                .status(status.name())
+                .build();
+
+        userRepo.save(user);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Foydalanuvchi muvaffaqiyatli ro'yxatdan o'tdi!");
+        response.put("status", status.name());
+        response.put("requiresApproval", status == Status.PENDING);
+
+        return ResponseEntity.ok(response);
+    }
+
     @Override
     public HttpEntity<?> checkToken(String token) {
         try {
-            // Validate token format first
             if (token == null || token.trim().isEmpty()) {
                 return ResponseEntity.ok(false);
             }
 
-            // Check if token contains whitespace (shouldn't at this point)
             if (token.contains(" ")) {
                 return ResponseEntity.ok(false);
             }
@@ -82,7 +127,4 @@ public class AuthServiceImpl implements AuthService {
 
         return ResponseEntity.ok(Map.of("access_token", newAccessToken, "refresh_token", token));
     }
-
-
-
 }

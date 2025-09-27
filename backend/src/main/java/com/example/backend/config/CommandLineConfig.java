@@ -33,6 +33,7 @@ public class CommandLineConfig implements CommandLineRunner {
                     .lastName("Annayev")
                     .department("atm")
                     .position("bolim_boshliq_atm")
+                    .status("active")
                     .password(passwordEncoder.encode("123456"))
                     .roles(roles)
                     .build();

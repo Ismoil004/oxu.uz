@@ -40,12 +40,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,"/api/auth/login","/api/auth/register").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/problems/statistics","/api/problems/active",
                                 "/api/problems/floor/{floorId}","/api/problems/room/{roomId}",
-                                "/api/problems/status/{status}",
+                                "/api/problems/status/{status}","/api/auth/user","/api/auth/pending-users",
                                 "/api/problems","/api/problems/room/{roomId}/with-problems",
                                 "/api/problems/room/{roomId}/problem-types","/api/problems/room/{roomId}/problem-type/{problemType}",
                                 "/api/problems/technician/{technicianId}","/api/problems/technician/{technicianId}/status/{status}",
                                 "/api/problems/statistics/counts","/api/problems/statistics/completed-by-technician","/api/problems/statistics/today-completed").permitAll()
-                        .requestMatchers(HttpMethod.PATCH,"/api/problems/{problemId}/status").permitAll()
+                        .requestMatchers(HttpMethod.PATCH,"/api/problems/{problemId}/status","/api/auth/users/{userId}/approve","/api/auth/users/{userId}/reject").permitAll()
                         .requestMatchers(HttpMethod.POST,"/api/problems","/api/problems/room/{roomId}/selected-problems").permitAll()
                                 .anyRequest().authenticated()
                 )

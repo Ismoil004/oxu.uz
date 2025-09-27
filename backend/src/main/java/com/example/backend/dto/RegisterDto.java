@@ -1,5 +1,6 @@
 package com.example.backend.dto;
 
+import com.example.backend.enums.Status;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -25,4 +26,5 @@ public class RegisterDto {
     @NotBlank(message = "Parol bo'sh bo'lmasligi kerak")
     @Size(min = 6, message = "Parol kamida 6 ta belgidan iborat bo'lishi kerak")
     private String password;
+    private Status status;
 }

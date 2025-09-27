@@ -3,23 +3,17 @@ package com.example.backend.controller;
 import com.example.backend.dto.AuthDto;
 import com.example.backend.dto.RegisterDto;
 import com.example.backend.entity.Users;
+import com.example.backend.enums.Status;
 import com.example.backend.repo.UserRepo;
 import com.example.backend.service.AuthService;
 import com.example.backend.service.JwtService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.crypto.SecretKey;
-
-import org.springframework.http.ResponseEntity;
-
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,73 +23,74 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtService jwtService;
-     private final UserRepo userRepo;
-    private static final String JWT_SECRET = "your-256-bit-secret-your-256-bit-secret"; // This should be a base64 encoded string
+    private final UserRepo userRepo;
+
+    @PostMapping("/login")
+    public HttpEntity<?> loginUser(@Valid @RequestBody AuthDto dto) {
+        return authService.login(dto.getUsername(), dto.getPassword());
+    }
+
+    @PostMapping("/register")
+    public HttpEntity<?> registerUser(@Valid @RequestBody RegisterDto dto) {
+        return authService.register(dto);
+    }
+
     @GetMapping("/user")
     public ResponseEntity<?> getUser(@RequestHeader("Authorization") String authorizationHeader) {
         try {
-            // Tokenni olish
-            String token = AuthUtils.extractTokenFromHeader(authorizationHeader);
-
-            // JWT dan username (yoki id) ni chiqarib olish
+            String token = extractTokenFromHeader(authorizationHeader);
             String username = jwtService.extractUsername(token);
 
-            // Bazadan foydalanuvchini topish
             Users user = userRepo.findByUsername(username)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             return ResponseEntity.ok(user);
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token: " + e.getMessage());
-        }
-    }
-    @PostMapping("/login")
-    public HttpEntity<?> loginUser(@Valid @RequestBody AuthDto dto) {
-        return authService.login(dto.getUsername(), dto.getPassword());
-    }
-    public class AuthUtils {
-        public static String extractTokenFromHeader(String authorizationHeader) {
-            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                return authorizationHeader.substring(7);
-            }
-            throw new IllegalArgumentException("Invalid Authorization header format");
-        }
-    }
-    @PostMapping("/register")
-    public HttpEntity<?> registerUser(@Valid @RequestBody RegisterDto dto) {
-        return authService.register(dto);
-    }
-    @GetMapping("/token")
-    public HttpEntity<?> checkToken(@RequestHeader("Authorization") String authorizationHeader) {
-        try {
-            String token = AuthUtils.extractTokenFromHeader(authorizationHeader);
-            return authService.checkToken(token);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.status(401).body("Invalid token: " + e.getMessage());
         }
     }
 
-    @GetMapping("/test")
-    public String test(@RequestHeader String token) {
-        SecretKey key = Keys.hmacShaKeyFor(JWT_SECRET.getBytes());
-        Claims claims;
+    @GetMapping("/pending-users")
+    public ResponseEntity<List<Users>> getPendingUsers() {
+        List<Users> pendingUsers = userRepo.findByStatus(String.valueOf(Status.PENDING));
+        return ResponseEntity.ok(pendingUsers);
+    }
+
+    @PatchMapping("/users/{userId}/approve")
+    public ResponseEntity<?> approveUser(@PathVariable UUID userId) {
         try {
-            claims = Jwts.parser()
-                    .setSigningKey(key)
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+            Users user = userRepo.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            user.setStatus(String.valueOf(Status.ACTIVE));
+            userRepo.save(user);
+
+            return ResponseEntity.ok("User approved successfully");
         } catch (Exception e) {
-            return "Invalid token";
+            return ResponseEntity.badRequest().body("Error approving user: " + e.getMessage());
         }
-
-        String username = claims.getSubject();
-        return "Token is valid for user: " + username;
     }
 
-    @GetMapping("/refresh")
-    public HttpEntity<?> generateRefreshToken(@RequestHeader String Authorization) {
-        return authService.refreshToken(Authorization);
+    @PatchMapping("/users/{userId}/reject")
+    public ResponseEntity<?> rejectUser(@PathVariable UUID userId) {
+        try {
+            Users user = userRepo.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            user.setStatus(String.valueOf(Status.REJECTED));
+            userRepo.save(user);
+
+            return ResponseEntity.ok("User rejected successfully");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error rejecting user: " + e.getMessage());
+        }
+    }
+
+    private String extractTokenFromHeader(String authorizationHeader) {
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            return authorizationHeader.substring(7);
+        }
+        throw new IllegalArgumentException("Invalid Authorization header format");
     }
 }

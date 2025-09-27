@@ -28,6 +28,8 @@ public class Users implements UserDetails {
 
     private String username;
     private String password;
+    @Column(name = "status", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'pending'")
+    private String status = "pending";
 
     @ManyToMany(fetch = FetchType.EAGER)
     private List<Role> roles;
