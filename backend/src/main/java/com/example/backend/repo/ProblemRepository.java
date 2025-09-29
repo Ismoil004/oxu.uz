@@ -1,5 +1,6 @@
 package com.example.backend.repo;
 
+import com.example.backend.controller.ProblemController;
 import com.example.backend.entity.Problem;
 
 import com.example.backend.enums.ProblemStatus;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -72,7 +74,17 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
 
     // Status va Vaqt oralig'ida yaratilgan muammolarni olish
     List<Problem> findByStatusAndReportedAtBetween(ProblemStatus status, LocalDateTime startDate, LocalDateTime endDate);
-
+    @Query("SELECT p.resolvedBy.uuid, p.resolvedBy.firstName || ' ' || p.resolvedBy.lastName, " +
+            "YEAR(p.resolvedAt), MONTH(p.resolvedAt), COUNT(p) " +
+            "FROM Problem p " +
+            "WHERE p.status = 'TUGALLANGAN' " +
+            "AND p.resolvedAt IS NOT NULL " +
+            "AND YEAR(p.resolvedAt) = :year " +
+            "AND MONTH(p.resolvedAt) = :month " +
+            "GROUP BY p.resolvedBy.uuid, p.resolvedBy.firstName, p.resolvedBy.lastName, YEAR(p.resolvedAt), MONTH(p.resolvedAt)")
+    List<Object[]> findMonthlyCompletedProblemsByAllTechnicians(
+            @Param("year") Integer year,
+            @Param("month") Integer month);
     // Muammolar sonini status bo'yicha hisoblash
     @Query("SELECT p.resolvedBy.uuid, p.resolvedBy.firstName, p.resolvedBy.lastName, COUNT(p) " +
             "FROM Problem p WHERE p.status = 'TUGALLANGAN' AND p.resolvedBy IS NOT NULL " +
@@ -141,4 +153,15 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
 
     @Override
     void flush(); // Ma'lumotlarni darhol databasega yozish
+    @Query("SELECT p FROM Problem p WHERE p.room.floor.bino.uuid = :binoUuid")
+    List<Problem> findByRoom_Floor_Bino_Uuid(@Param("binoUuid") UUID binoUuid);
+
+    // ✅ Texnikning binosidagi muammolarni status bo'yicha olish
+    @Query("SELECT p FROM Problem p WHERE p.room.floor.bino.uuid = :binoUuid AND p.status = :status")
+    List<Problem> findByRoomFloorBinoUuidAndStatus(@Param("binoUuid") UUID binoUuid, @Param("status") ProblemStatus status);
+    @Query("SELECT p FROM Problem p WHERE p.status = :status AND DATE(p.resolvedAt) = :date")
+    List<Problem> findByStatusAndCompletedDate(@Param("status") ProblemStatus status,
+                                               @Param("date") LocalDate date);
+    List<Problem> findByResolvedByUuidAndStatusAndResolvedAtBetween(
+            UUID resolvedBy_uuid, ProblemStatus status, LocalDateTime resolvedAt, LocalDateTime resolvedAt2);
 }

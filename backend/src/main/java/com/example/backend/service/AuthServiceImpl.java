@@ -1,8 +1,10 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.RegisterDto;
+import com.example.backend.entity.Bino;
 import com.example.backend.entity.Users;
 import com.example.backend.enums.Status; // Import qo'shing
+import com.example.backend.repo.BinoRepository;
 import com.example.backend.repo.UserRepo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -17,6 +19,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
+    private final BinoRepository binoRepo; // ✅ Yangi
 
     private final AuthenticationManager authenticationManager;
     private final UserRepo userRepo;
@@ -79,7 +82,11 @@ public class AuthServiceImpl implements AuthService {
         } else {
             status = Status.ACTIVE;
         }
-
+        Bino bino = null;
+        if (dto.getBinoId() != null) {
+            bino = binoRepo.findById(dto.getBinoId())
+                    .orElseThrow(() -> new RuntimeException("Bino not found with id: " + dto.getBinoId()));
+        }
         Users user = Users.builder()
                 .firstName(dto.getFirstName())
                 .lastName(dto.getLastName())
@@ -87,7 +94,10 @@ public class AuthServiceImpl implements AuthService {
                 .position(dto.getPosition())
                 .username(dto.getUsername())
                 .password(passwordEncoder.encode(dto.getPassword()))
+
                 .status(status.name())
+                .bino(bino) // ✅ Bino ni set qilish
+
                 .build();
 
         userRepo.save(user);

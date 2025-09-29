@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.ProblemDTO;
+import com.example.backend.dto.ProblemResponseDTO;
 import com.example.backend.dto.ProblemTypeDTO;
 import com.example.backend.dto.RoomWithProblemsDTO;
 
@@ -15,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,7 +46,7 @@ public class ProblemController {
     public ResponseEntity<List<ProblemDTO>> createSelectedProblemsForRoom(
             @PathVariable UUID roomId,
             @RequestParam UUID reportedById,
-            @RequestBody ProblemRequest request) { // ✅ Yangi Request DTO
+            @RequestBody ProblemRequest request) {
 
         List<ProblemDTO> createdProblems = problemService.createSelectedProblemsForRoom(
                 roomId, reportedById, request.getProblemTypes(), request.getDescriptions());
@@ -65,13 +67,12 @@ public class ProblemController {
             ProblemDTO createdProblem = problemService.createProblem(problemDTO);
             return ResponseEntity.ok(createdProblem);
         } catch (Exception e) {
-            e.printStackTrace(); // Consolega xatoni chiqaring
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Xatolik yuz berdi: " + e.getMessage());
         }
     }
 
-    // Barcha muammolarni olish
     @GetMapping
     public ResponseEntity<List<ProblemDTO>> getAllProblems() {
         List<ProblemDTO> problems = problemService.getAllProblems();
@@ -108,10 +109,85 @@ public class ProblemController {
         ProblemDTO updatedProblem = problemService.updateProblemStatus(problemId, status, resolvedById, assignedToId);
         return ResponseEntity.ok(updatedProblem);
     }
+    @GetMapping("/statistics/monthly-completed")
+    public ResponseEntity<List<MonthlyTechnicianStatsDTO>> getMonthlyCompletedProblemsByAllTechnicians(
+            @RequestParam Integer year,
+            @RequestParam Integer month) {
+
+        List<MonthlyTechnicianStatsDTO> stats = problemService.getMonthlyCompletedProblemsByAllTechnicians(year, month);
+        return ResponseEntity.ok(stats);
+    }
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MonthlyTechnicianStatsDTO {
+        private UUID technicianId;
+        private String technicianName;
+        private int year;
+        private int month;
+        private String monthName; // "Yanvar", "Fevral", etc.
+        private long completedCount;
+        private LocalDate periodStart;
+        private LocalDate periodEnd;
+    }
+    @GetMapping("/today-completed-all")
+    public ResponseEntity<List<ProblemDTO>> getAllTodayCompletedProblems() {
+        List<ProblemDTO> problems = problemService.getCompletedProblemsByDate(LocalDate.now());
+        return ResponseEntity.ok(problems);
+    }
     @GetMapping("/technician/{technicianId}")
     public ResponseEntity<List<ProblemDTO>> getProblemsByTechnician(@PathVariable UUID technicianId) {
         List<ProblemDTO> problems = problemService.getProblemsByTechnician(technicianId);
         return ResponseEntity.ok(problems);
+    }
+    @GetMapping("/statistics/user/{userId}/yearly-completed")
+    public ResponseEntity<List<YearlyUserStatsDTO>> getYearlyCompletedProblemsByUser(
+            @PathVariable UUID userId,
+            @RequestParam Integer year) {
+
+        List<YearlyUserStatsDTO> stats = problemService.getYearlyCompletedProblemsByUser(userId, year);
+        return ResponseEntity.ok(stats);
+    }
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class YearlyUserStatsDTO {
+        private UUID userId;
+        private String userName;
+        private int year;
+        private long completedCount;
+        private List<MonthlyStats> monthlyBreakdown; // ✅ Oylarga bo'lingan statistikalar
+
+        // ✅ Oylik statistika uchun inner class
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class MonthlyStats {
+            private int month;
+            private String monthName; // "Yanvar", "Fevral", etc.
+            private long completedCount;
+        }
+    }
+    // ProblemController.java ga yangi endpoint qo'shamiz
+    @GetMapping("/technician/{technicianId}/bino-problems")
+    public ResponseEntity<?> getProblemsByTechnicianBino(@PathVariable UUID technicianId) {
+        try {
+            List<ProblemResponseDTO> problems = problemService.getProblemsByTechnicianBino(technicianId);
+            return ResponseEntity.ok(problems);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/technician/{technicianId}/bino-problems/status/{status}")
+    public ResponseEntity<?> getProblemsByTechnicianBinoAndStatus(
+            @PathVariable UUID technicianId,
+            @PathVariable String status) {
+        try {
+            return ResponseEntity.ok(problemService.getProblemsByTechnicianBinoAndStatus(technicianId, status));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
     @GetMapping("/statistics/counts")
     public ResponseEntity<ProblemStatisticsDTO> getProblemCounts() {

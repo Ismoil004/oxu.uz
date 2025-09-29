@@ -44,7 +44,10 @@ public class SecurityConfig {
                                 "/api/problems","/api/problems/room/{roomId}/with-problems",
                                 "/api/problems/room/{roomId}/problem-types","/api/problems/room/{roomId}/problem-type/{problemType}",
                                 "/api/problems/technician/{technicianId}","/api/problems/technician/{technicianId}/status/{status}",
-                                "/api/problems/statistics/counts","/api/problems/statistics/completed-by-technician","/api/problems/statistics/today-completed").permitAll()
+                                "/api/problems/statistics/counts","/api/problems/statistics/completed-by-technician","/api/problems/statistics/today-completed",
+                                "/api/problems/statistics/monthly-completed","/api/problems/today-completed-all",
+                                "/api/problems/statistics/user/{userId}/yearly-completed","/api/problems/technician/{technicianId}/bino-problems",
+                                "/api/problems/technician/{technicianId}/bino-problems/status/{status}").permitAll()
                         .requestMatchers(HttpMethod.PATCH,"/api/problems/{problemId}/status","/api/auth/users/{userId}/approve","/api/auth/users/{userId}/reject").permitAll()
                         .requestMatchers(HttpMethod.POST,"/api/problems","/api/problems/room/{roomId}/selected-problems").permitAll()
                                 .anyRequest().authenticated()

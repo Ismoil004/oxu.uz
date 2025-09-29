@@ -15,6 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @Builder
 @Entity
+@Table(name = "users")
 public class Users implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -28,11 +29,18 @@ public class Users implements UserDetails {
 
     private String username;
     private String password;
+
     @Column(name = "status", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'pending'")
     private String status = "pending";
 
+    // ✅ Yangi: User bilan bino bog'lanishi
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bino_id")
+    private Bino bino;
+
     @ManyToMany(fetch = FetchType.EAGER)
     private List<Role> roles;
+
     // User ga tegishli reported problems
     @OneToMany(mappedBy = "reportedBy", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Problem> reportedProblems = new ArrayList<>();

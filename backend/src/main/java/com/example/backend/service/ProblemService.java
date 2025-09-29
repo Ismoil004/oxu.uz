@@ -2,6 +2,7 @@ package com.example.backend.service;
 
 import com.example.backend.controller.ProblemController;
 import com.example.backend.dto.ProblemDTO;
+import com.example.backend.dto.ProblemResponseDTO;
 import com.example.backend.dto.ProblemTypeDTO;
 import com.example.backend.dto.RoomWithProblemsDTO;
 import com.example.backend.entity.*;
@@ -15,7 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -212,7 +215,41 @@ public class ProblemService {
             );
         }).collect(Collectors.toList());
     }
-@Transactional
+    @Transactional
+    public List<ProblemController.MonthlyTechnicianStatsDTO> getMonthlyCompletedProblemsByAllTechnicians(Integer year, Integer month) {
+        List<Object[]> results = problemRepository.findMonthlyCompletedProblemsByAllTechnicians(year, month);
+
+        return results.stream().map(result -> {
+            ProblemController.MonthlyTechnicianStatsDTO stats = new ProblemController.MonthlyTechnicianStatsDTO();
+            stats.setTechnicianId((UUID) result[0]);
+            stats.setTechnicianName((String) result[1]);
+            stats.setYear((Integer) result[2]);
+            stats.setMonth((Integer) result[3]);
+            stats.setCompletedCount((Long) result[4]);
+
+            // Month name qo'shish
+            String[] monthNames = {"Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+                    "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"};
+            stats.setMonthName(monthNames[month - 1]);
+
+            // Period dates
+            LocalDate periodStart = LocalDate.of(year, month, 1);
+            LocalDate periodEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
+            stats.setPeriodStart(periodStart);
+            stats.setPeriodEnd(periodEnd);
+
+            return stats;
+        }).collect(Collectors.toList());
+    }
+
+    private String getMonthNameInUzbek(int month) {
+        String[] uzbekMonths = {
+                "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+                "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"
+        };
+        return uzbekMonths[month - 1];
+    }
+    @Transactional
     public List<ProblemDTO> getTodayCompletedProblems() {
         LocalDateTime startOfDay = LocalDateTime.now().toLocalDate().atStartOfDay();
         LocalDateTime endOfDay = LocalDateTime.now().toLocalDate().atTime(23, 59, 59);
@@ -359,6 +396,109 @@ public class ProblemService {
 
         return dto;
     }
+    @Transactional
+    public List<ProblemController.YearlyUserStatsDTO> getYearlyCompletedProblemsByUser(UUID userId, Integer year) {
+        // 1. Foydalanuvchi mavjudligini tekshirish
+        Users technician = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Foydalanuvchi topilmadi: " + userId));
+
+        // 2. Yil bo'yicha tugallangan muammolarni olish
+        LocalDate startDate = LocalDate.of(year, 1, 1);
+        LocalDate endDate = LocalDate.of(year, 12, 31);
+
+        List<Problem> completedProblems = problemRepository.findByResolvedByUuidAndStatusAndResolvedAtBetween(
+                userId, ProblemStatus.TUGALLANGAN, startDate.atStartOfDay(), endDate.atStartOfDay());
+
+        // 3. Oylik statistika yaratish
+        List<ProblemController.YearlyUserStatsDTO.MonthlyStats> monthlyStats = new ArrayList<>();
+
+        for (int month = 1; month <= 12; month++) {
+            final int currentMonth = month;
+            long monthlyCount = completedProblems.stream()
+                    .filter(problem -> problem.getResolvedAt().getMonthValue() == currentMonth)
+                    .count();
+
+            String monthName = getMonthNameUz(month);
+            monthlyStats.add(new ProblemController.YearlyUserStatsDTO.MonthlyStats(month, monthName, monthlyCount));
+        }
+
+        // 4. Yillik statistika yaratish
+        long yearlyCount = completedProblems.size();
+
+        ProblemController.YearlyUserStatsDTO yearlyStats = new ProblemController.YearlyUserStatsDTO(
+                userId,
+                technician.getFirstName() + " " + technician.getLastName(),
+                year,
+                yearlyCount,
+                monthlyStats
+        );
+
+        return List.of(yearlyStats);
+    }
+
+    private String getMonthNameUz(int month) {
+        String[] monthNames = {
+                "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
+                "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"
+        };
+        return monthNames[month - 1];
+    }
+    @Transactional
+    public List<ProblemDTO> getCompletedProblemsByDate(LocalDate date) {
+        log.info("{} sanasi uchun tugallangan muammolarni olish", date);
+
+        try {
+            List<Problem> completedProblems = problemRepository.findByStatusAndCompletedDate(
+                    ProblemStatus.TUGALLANGAN, date);
+
+            log.info("{} sanasi uchun {} ta tugallangan muammo topildi", date, completedProblems.size());
+
+            return completedProblems.stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("{} sanasi uchun tugallangan muammolarni olishda xatolik: {}", date, e.getMessage(), e);
+            throw new RuntimeException("Tugallangan muammolarni olishda xatolik: " + e.getMessage());
+        }
+    }
+    @Transactional
+    public List<ProblemResponseDTO> getProblemsByTechnicianBino(UUID technicianId) {
+        Users technician = userRepository.findById(technicianId)
+                .orElseThrow(() -> new RuntimeException("Technician not found"));
+
+        if (technician.getBino() == null) {
+            throw new RuntimeException("Technician has no assigned building");
+        }
+
+        List<Problem> problems = problemRepository.findByRoom_Floor_Bino_Uuid(technician.getBino().getUuid());
+
+        return problems.stream()
+                .map(ProblemResponseDTO::fromProblem)
+                .collect(Collectors.toList());
+    }
+    @Transactional
+    public List<Problem> getProblemsByTechnicianBinoAndStatus(UUID technicianId, String status) {
+        Users technician = userRepository.findById(technicianId)
+                .orElseThrow(() -> new RuntimeException("Technician not found"));
+
+        if (technician.getBino() == null) {
+            throw new RuntimeException("Technician has no assigned building");
+        }
+
+        ProblemStatus problemStatus;
+        try {
+            problemStatus = ProblemStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status: " + status);
+        }
+
+        return problemRepository.findByRoomFloorBinoUuidAndStatus(
+                technician.getBino().getUuid(),
+                problemStatus
+        );
+    }
+
 
     // Statistikalar uchun inner class
     public static class ProblemStatistics {
