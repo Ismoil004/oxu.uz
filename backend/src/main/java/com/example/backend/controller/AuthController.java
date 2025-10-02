@@ -13,7 +13,9 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -71,7 +73,18 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Error approving user: " + e.getMessage());
         }
     }
+    @GetMapping("/technicians/active/count")
+    public ResponseEntity<Map<String, Object>> getActiveTechniciansCount() {
+        long count = userRepo.countActiveUsersByDepartment();
 
+        Map<String, Object> response = new HashMap<>();
+        response.put("department", "texnik");
+        response.put("status", "ACTIVE");
+        response.put("count", count);
+        response.put("message", "Texnik departmentidagi ACTIVE foydalanuvchilar soni: " + count);
+
+        return ResponseEntity.ok(response);
+    }
     @PatchMapping("/users/{userId}/reject")
     public ResponseEntity<?> rejectUser(@PathVariable UUID userId) {
         try {

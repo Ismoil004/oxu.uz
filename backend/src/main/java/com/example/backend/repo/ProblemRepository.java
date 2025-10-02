@@ -150,6 +150,35 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
     List<Problem> findProblemsWithPagination();
     @Override
     <S extends Problem> S save(S entity);
+    @Query("SELECT p FROM Problem p " +
+            "JOIN FETCH p.room r " +
+            "JOIN FETCH r.floor f " +
+            "JOIN FETCH f.bino " +
+            "JOIN FETCH p.reportedBy " +
+            "LEFT JOIN FETCH p.resolvedBy " +
+            "LEFT JOIN FETCH p.assignedTo " +
+            "WHERE f.bino.uuid = :binoId")
+    List<Problem> findByRoom_Floor_Bino_UuidWithDetails(@Param("binoId") UUID binoId);
+    @Query("SELECT p FROM Problem p " +
+            "LEFT JOIN FETCH p.room r " +
+            "LEFT JOIN FETCH r.floor f " +
+            "LEFT JOIN FETCH f.bino b " +
+            "LEFT JOIN FETCH p.reportedBy " +
+            "LEFT JOIN FETCH p.resolvedBy " +
+            "ORDER BY p.reportedAt DESC")
+    List<Problem> findAllWithBuildingInfo();
+    // Boshqa metodlar ham shu tarzda
+    @Query("SELECT p FROM Problem p " +
+            "JOIN FETCH p.room r " +
+            "JOIN FETCH r.floor f " +
+            "JOIN FETCH f.bino " +
+            "JOIN FETCH p.reportedBy " +
+            "LEFT JOIN FETCH p.resolvedBy " +
+            "LEFT JOIN FETCH p.assignedTo " +
+            "WHERE f.bino.uuid = :binoId AND p.status = :status")
+    List<Problem> findByRoomFloorBinoUuidAndStatusWithDetails(
+            @Param("binoId") UUID binoId,
+            @Param("status") ProblemStatus status);
 
     @Override
     void flush(); // Ma'lumotlarni darhol databasega yozish

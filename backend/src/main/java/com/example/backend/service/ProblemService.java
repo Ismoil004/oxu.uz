@@ -115,6 +115,7 @@ public class ProblemService {
             problem.setProblemType(problemType);
             problem.setDescription(String.valueOf(problemType));
             problem.setRoom(room);
+            
             problem.setReportedBy(reportedBy);
             problem.setStatus(ProblemStatus.YANGI);
             problem.setReportedAt(LocalDateTime.now());
@@ -371,6 +372,7 @@ public class ProblemService {
         dto.setProblemType(problem.getProblemType());
         dto.setDescription(problem.getDescription());
         dto.setReportedAt(problem.getReportedAt());
+
         dto.setResolvedAt(problem.getResolvedAt());
         dto.setStatus(problem.getStatus());
 
@@ -462,7 +464,7 @@ public class ProblemService {
             throw new RuntimeException("Tugallangan muammolarni olishda xatolik: " + e.getMessage());
         }
     }
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ProblemResponseDTO> getProblemsByTechnicianBino(UUID technicianId) {
         Users technician = userRepository.findById(technicianId)
                 .orElseThrow(() -> new RuntimeException("Technician not found"));
@@ -471,13 +473,15 @@ public class ProblemService {
             throw new RuntimeException("Technician has no assigned building");
         }
 
-        List<Problem> problems = problemRepository.findByRoom_Floor_Bino_Uuid(technician.getBino().getUuid());
+        // Yangi JOIN FETCH metodini ishlating
+        List<Problem> problems = problemRepository.findByRoom_Floor_Bino_UuidWithDetails(technician.getBino().getUuid());
 
         return problems.stream()
-                .map(ProblemResponseDTO::fromProblem)
+                .map(this::convertToResponseDTO) // Yangi metod
                 .collect(Collectors.toList());
     }
-    @Transactional
+
+    @Transactional(readOnly = true)
     public List<Problem> getProblemsByTechnicianBinoAndStatus(UUID technicianId, String status) {
         Users technician = userRepository.findById(technicianId)
                 .orElseThrow(() -> new RuntimeException("Technician not found"));
@@ -493,12 +497,55 @@ public class ProblemService {
             throw new RuntimeException("Invalid status: " + status);
         }
 
-        return problemRepository.findByRoomFloorBinoUuidAndStatus(
+        return problemRepository.findByRoomFloorBinoUuidAndStatusWithDetails(
                 technician.getBino().getUuid(),
                 problemStatus
         );
     }
+    private ProblemResponseDTO convertToResponseDTO(Problem problem) {
+        ProblemResponseDTO dto = new ProblemResponseDTO();
+        dto.setUuid(problem.getUuid());
+        dto.setProblemType(String.valueOf(problem.getProblemType()));
+        dto.setDescription(problem.getDescription());
+        dto.setReportedAt(problem.getReportedAt());
+        dto.setResolvedAt(problem.getResolvedAt());
+        dto.setStatus(String.valueOf(problem.getStatus()));
 
+        // Room ma'lumotlari
+        if (problem.getRoom() != null) {
+            dto.setRoomNumber(problem.getRoom().getRoomNumber());
+
+            // Floor ma'lumotlari
+            if (problem.getRoom().getFloor() != null) {
+                dto.setFloorNumber(String.valueOf(problem.getRoom().getFloor().getFloorNumber()));
+
+                // Bino ma'lumotlari
+                if (problem.getRoom().getFloor().getBino() != null) {
+                    dto.setBinoName(problem.getRoom().getFloor().getBino().getName());
+                }
+            }
+        }
+
+        // ReportedBy ma'lumotlari - ENDI NULL BO'LMAYDI
+        if (problem.getReportedBy() != null) {
+            dto.setReportedById(problem.getReportedBy().getUuid());
+            dto.setReportedByName(problem.getReportedBy().getFirstName() + " " + problem.getReportedBy().getLastName());
+        }
+
+        // ResolvedBy ma'lumotlari
+        if (problem.getResolvedBy() != null) {
+            dto.setResolvedById(problem.getResolvedBy().getUuid());
+            dto.setResolvedByName(problem.getResolvedBy().getFirstName() + " " + problem.getResolvedBy().getLastName());
+        }
+
+        // AssignedTo ma'lumotlari
+        if (problem.getAssignedTo() != null) {
+            dto.setAssignedToId(problem.getAssignedTo().getUuid());
+            dto.setAssignedToName(problem.getAssignedTo().getFirstName() + " " + problem.getAssignedTo().getLastName());
+        }
+
+        return dto;
+    }
 
     // Statistikalar uchun inner class
     public static class ProblemStatistics {

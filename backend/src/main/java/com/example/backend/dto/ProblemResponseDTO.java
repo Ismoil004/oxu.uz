@@ -21,6 +21,12 @@ public class ProblemResponseDTO {
     private String roomNumber;
     private String floorNumber;
     private String binoName;
+    private UUID reportedById;
+    private String reportedByName;
+    private UUID resolvedById;
+    private String resolvedByName;
+    private UUID assignedToId;
+    private String assignedToName;
 
     public static ProblemResponseDTO fromProblem(Problem problem) {
         ProblemResponseDTO dto = new ProblemResponseDTO();

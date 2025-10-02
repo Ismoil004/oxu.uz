@@ -94,7 +94,37 @@ public class ProblemController {
                     .body(e.getMessage());
         }
     }
+    @GetMapping("/all")
+    public ResponseEntity<List<ProblemDTO>> getAllProblemsWithAllStatuses() {
+        List<ProblemDTO> problems = problemService.getAllProblems();
+        return ResponseEntity.ok(problems);
+    }
 
+    // ✅ Status bo'yicha muammolarni olish
+
+
+    // ✅ Yangi muammolarni olish
+    @GetMapping("/status/new")
+    public ResponseEntity<List<ProblemDTO>> getNewProblems() {
+        List<ProblemDTO> problems = problemService.getProblemsByStatus(ProblemStatus.YANGI);
+        return ResponseEntity.ok(problems);
+    }
+
+    // ✅ Jarayondagi muammolarni olish
+    @GetMapping("/status/in-progress")
+    public ResponseEntity<List<ProblemDTO>> getInProgressProblems() {
+        List<ProblemDTO> problems = problemService.getProblemsByStatus(ProblemStatus.JARAYONDA);
+        return ResponseEntity.ok(problems);
+    }
+
+    // ✅ Tugallangan muammolarni olish
+    @GetMapping("/status/completed")
+    public ResponseEntity<List<ProblemDTO>> getCompletedProblems() {
+        List<ProblemDTO> problems = problemService.getProblemsByStatus(ProblemStatus.TUGALLANGAN);
+        return ResponseEntity.ok(problems);
+    }
+
+    // ✅ Active muammolarni olish (YANGI + JARAYONDA)
 
 
     // Muammoni statusini yangilash
@@ -140,6 +170,7 @@ public class ProblemController {
         List<ProblemDTO> problems = problemService.getProblemsByTechnician(technicianId);
         return ResponseEntity.ok(problems);
     }
+
     @GetMapping("/statistics/user/{userId}/yearly-completed")
     public ResponseEntity<List<YearlyUserStatsDTO>> getYearlyCompletedProblemsByUser(
             @PathVariable UUID userId,
@@ -168,6 +199,8 @@ public class ProblemController {
             private long completedCount;
         }
     }
+    // ProblemController.java ga qo'shing
+
     // ProblemController.java ga yangi endpoint qo'shamiz
     @GetMapping("/technician/{technicianId}/bino-problems")
     public ResponseEntity<?> getProblemsByTechnicianBino(@PathVariable UUID technicianId) {

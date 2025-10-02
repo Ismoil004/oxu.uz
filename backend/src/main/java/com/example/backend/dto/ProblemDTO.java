@@ -1,6 +1,7 @@
 package com.example.backend.dto;
 
 
+import com.example.backend.entity.Bino;
 import com.example.backend.enums.ProblemStatus;
 import com.example.backend.enums.ProblemType;
 import lombok.Data;
@@ -15,6 +16,7 @@ public class ProblemDTO {
     private String description;
     private LocalDateTime reportedAt;
     private LocalDateTime resolvedAt;
+    private Bino bino;
     private ProblemStatus status;
     private UUID roomId;
     private String roomNumber;
