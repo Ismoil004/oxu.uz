@@ -1,6 +1,5 @@
 package com.example.backend.dto;
 
-
 import com.example.backend.entity.Bino;
 import com.example.backend.enums.ProblemStatus;
 import com.example.backend.enums.ProblemType;
@@ -26,4 +25,9 @@ public class ProblemDTO {
     private String resolvedByName;
     private UUID assignedToId;
     private String assignedToName;
+
+    // ✅ Yangi field: Bino nomi
+    private String binoName;
+    // ✅ Yangi field: Qavat raqami
+    private String floorNumber;
 }

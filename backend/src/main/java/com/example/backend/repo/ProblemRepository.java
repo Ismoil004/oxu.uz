@@ -167,6 +167,48 @@ public interface ProblemRepository extends JpaRepository<Problem, UUID> {
             "LEFT JOIN FETCH p.resolvedBy " +
             "ORDER BY p.reportedAt DESC")
     List<Problem> findAllWithBuildingInfo();
+    @Query("SELECT p FROM Problem p " +
+            "LEFT JOIN FETCH p.room r " +
+            "LEFT JOIN FETCH r.floor f " +
+            "LEFT JOIN FETCH f.bino " +
+            "LEFT JOIN FETCH p.reportedBy " +
+            "LEFT JOIN FETCH p.resolvedBy " +
+            "LEFT JOIN FETCH p.assignedTo " +
+            "WHERE p.status = :status " +
+            "ORDER BY p.reportedAt DESC")
+    List<Problem> findByStatusWithDetails(@Param("status") ProblemStatus status);
+
+    // ✅ Bino ma'lumotlari bilan yangi muammolarni olish
+    @Query("SELECT p FROM Problem p " +
+            "LEFT JOIN FETCH p.room r " +
+            "LEFT JOIN FETCH r.floor f " +
+            "LEFT JOIN FETCH f.bino " +
+            "LEFT JOIN FETCH p.reportedBy " +
+            "WHERE p.status = 'YANGI' " +
+            "ORDER BY p.reportedAt DESC")
+    List<Problem> findNewProblemsWithBuildingDetails();
+
+    // ✅ Bino ma'lumotlari bilan jarayondagi muammolarni olish
+    @Query("SELECT p FROM Problem p " +
+            "LEFT JOIN FETCH p.room r " +
+            "LEFT JOIN FETCH r.floor f " +
+            "LEFT JOIN FETCH f.bino " +
+            "LEFT JOIN FETCH p.reportedBy " +
+            "LEFT JOIN FETCH p.assignedTo " +
+            "WHERE p.status = 'JARAYONDA' " +
+            "ORDER BY p.reportedAt DESC")
+    List<Problem> findInProgressProblemsWithBuildingDetails();
+
+    // ✅ Bino ma'lumotlari bilan tugallangan muammolarni olish
+    @Query("SELECT p FROM Problem p " +
+            "LEFT JOIN FETCH p.room r " +
+            "LEFT JOIN FETCH r.floor f " +
+            "LEFT JOIN FETCH f.bino " +
+            "LEFT JOIN FETCH p.reportedBy " +
+            "LEFT JOIN FETCH p.resolvedBy " +
+            "WHERE p.status = 'TUGALLANGAN' " +
+            "ORDER BY p.resolvedAt DESC")
+    List<Problem> findCompletedProblemsWithBuildingDetails();
     // Boshqa metodlar ham shu tarzda
     @Query("SELECT p FROM Problem p " +
             "JOIN FETCH p.room r " +

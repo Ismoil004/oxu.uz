@@ -366,19 +366,28 @@ public class ProblemService {
     }
 
     // DTO ga convert qilish
+    // DTO ga convert qilish
     private ProblemDTO convertToDTO(Problem problem) {
         ProblemDTO dto = new ProblemDTO();
         dto.setUuid(problem.getUuid());
         dto.setProblemType(problem.getProblemType());
         dto.setDescription(problem.getDescription());
         dto.setReportedAt(problem.getReportedAt());
-
         dto.setResolvedAt(problem.getResolvedAt());
         dto.setStatus(problem.getStatus());
 
         if (problem.getRoom() != null) {
             dto.setRoomId(problem.getRoom().getUuid());
             dto.setRoomNumber(problem.getRoom().getRoomNumber());
+
+            // ✅ Bino va qavat ma'lumotlarini qo'shish
+            if (problem.getRoom().getFloor() != null) {
+                dto.setFloorNumber(String.valueOf(problem.getRoom().getFloor().getFloorNumber()));
+
+                if (problem.getRoom().getFloor().getBino() != null) {
+                    dto.setBinoName(problem.getRoom().getFloor().getBino().getName());
+                }
+            }
         }
 
         if (problem.getReportedBy() != null) {
@@ -519,23 +528,27 @@ public class ProblemService {
             if (problem.getRoom().getFloor() != null) {
                 dto.setFloorNumber(String.valueOf(problem.getRoom().getFloor().getFloorNumber()));
 
-                // Bino ma'lumotlari
                 if (problem.getRoom().getFloor().getBino() != null) {
                     dto.setBinoName(problem.getRoom().getFloor().getBino().getName());
                 }
             }
         }
 
-        // ReportedBy ma'lumotlari - ENDI NULL BO'LMAYDI
+        // ✅ ReportedBy ma'lumotlari - TELEFON RAQAMINI HAM QO'SHAMIZ
         if (problem.getReportedBy() != null) {
             dto.setReportedById(problem.getReportedBy().getUuid());
             dto.setReportedByName(problem.getReportedBy().getFirstName() + " " + problem.getReportedBy().getLastName());
+
+            // ✅ TELEFON RAQAMINI QO'SHISH
+            dto.setPhoneNumber(problem.getReportedBy().getPhoneNumber());
         }
 
         // ResolvedBy ma'lumotlari
         if (problem.getResolvedBy() != null) {
             dto.setResolvedById(problem.getResolvedBy().getUuid());
             dto.setResolvedByName(problem.getResolvedBy().getFirstName() + " " + problem.getResolvedBy().getLastName());
+            // ResolvedBy uchun ham telefon raqamini qo'shish mumkin
+            // dto.setResolvedByPhone(problem.getResolvedBy().getPhoneNumber());
         }
 
         // AssignedTo ma'lumotlari

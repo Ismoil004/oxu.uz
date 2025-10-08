@@ -1,15 +1,10 @@
 package com.example.backend.dto;
 
-import com.example.backend.enums.Status;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
-public class RegisterDto {
+public class TeacherRegisterDto {
     @NotBlank(message = "Ism bo'sh bo'lmasligi kerak")
     private String firstName;
 
@@ -22,10 +17,6 @@ public class RegisterDto {
     @NotBlank(message = "Lavozim bo'sh bo'lmasligi kerak")
     private String position;
 
-    private String username;
-
+    @NotBlank(message = "Telefon raqam bo'sh bo'lmasligi kerak")
     private String phoneNumber;
-    private String password;
-    private Status status;
-    private UUID binoId;
 }

@@ -28,6 +28,7 @@ public class Users implements UserDetails {
     private String position;
 
     private String username;
+    private String phoneNumber;
     private String password;
 
     @Column(name = "status", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'pending'")

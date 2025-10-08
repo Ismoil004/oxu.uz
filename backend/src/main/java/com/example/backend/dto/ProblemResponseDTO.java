@@ -27,6 +27,7 @@ public class ProblemResponseDTO {
     private String resolvedByName;
     private UUID assignedToId;
     private String assignedToName;
+    private String phoneNumber; // ✅ Telefon raqami
 
     public static ProblemResponseDTO fromProblem(Problem problem) {
         ProblemResponseDTO dto = new ProblemResponseDTO();
@@ -39,6 +40,12 @@ public class ProblemResponseDTO {
         dto.setRoomNumber(problem.getRoom().getRoomNumber());
         dto.setFloorNumber(problem.getRoom().getFloor().getFloorNumber());
         dto.setBinoName(problem.getRoom().getFloor().getBino().getName());
+
+        // ✅ Telefon raqamini qo'shamiz
+        if (problem.getReportedBy() != null && problem.getReportedBy().getPhoneNumber() != null) {
+            dto.setPhoneNumber(problem.getReportedBy().getPhoneNumber());
+        }
+
         return dto;
     }
 }

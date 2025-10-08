@@ -3,7 +3,7 @@ package com.example.backend.service;
 import com.example.backend.dto.RegisterDto;
 import com.example.backend.entity.Bino;
 import com.example.backend.entity.Users;
-import com.example.backend.enums.Status; // Import qo'shing
+import com.example.backend.enums.Status;
 import com.example.backend.repo.BinoRepository;
 import com.example.backend.repo.UserRepo;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +19,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
-    private final BinoRepository binoRepo; // ✅ Yangi
-
+    private final BinoRepository binoRepo;
     private final AuthenticationManager authenticationManager;
     private final UserRepo userRepo;
     private final PasswordEncoder passwordEncoder;
@@ -31,7 +30,6 @@ public class AuthServiceImpl implements AuthService {
         authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
         Users user = userRepo.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Foydalanuvchi statusini tekshirish
         if (user.getStatus().equals(Status.PENDING.name())) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
@@ -50,7 +48,6 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtService.generateJwtToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        // Create a response with both tokens and user data
         Map<String, Object> response = new HashMap<>();
         response.put("access_token", accessToken);
         response.put("refresh_token", refreshToken);
@@ -69,35 +66,57 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public HttpEntity<?> register(RegisterDto dto) {
-        if (userRepo.existsByUsername(dto.getUsername())) {
-            return ResponseEntity.badRequest().body("Bunday login mavjud!");
-        }
-
-        // Statusni avtomatik belgilash: texnik yoki atm bo'limi uchun PENDING, qolganlari uchun ACTIVE
-        Status status;
         String department = dto.getDepartment().toLowerCase();
+        boolean isTechnicalOrATM = "texnik".equals(department) || "atm".equals(department);
 
-        if ("texnik".equals(department) || "atm".equals(department)) {
-            status = Status.PENDING;
-        } else {
-            status = Status.ACTIVE;
+        // ✅ Texnik/ATM uchun username tekshirish
+        if (isTechnicalOrATM) {
+            if (dto.getUsername() == null || dto.getUsername().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Texnik/ATM xodimlari uchun login talab qilinadi!");
+            }
+
+            if (userRepo.existsByUsername(dto.getUsername())) {
+                return ResponseEntity.badRequest().body("Bunday login mavjud!");
+            }
         }
+
+        // ✅ Boshqa bo'limlar uchun telefon raqam tekshirish
+        if (!isTechnicalOrATM) {
+            if (dto.getPhoneNumber() == null || dto.getPhoneNumber().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Telefon raqam talab qilinadi!");
+            }
+
+            // ✅ Boshqa bo'limlar uchun username ni telefon raqamdan avtomatik yaratish
+            String generatedUsername = dto.getPhoneNumber().trim();
+            if (userRepo.existsByUsername(generatedUsername)) {
+                return ResponseEntity.badRequest().body("Bu telefon raqam bilan foydalanuvchi allaqachon mavjud!");
+            }
+            dto.setUsername(generatedUsername);
+
+            // ✅ Boshqa bo'limlar uchun parolni avtomatik yaratish
+            String generatedPassword = "123456"; // Yoki boshqa default parol
+            dto.setPassword(generatedPassword);
+        }
+
+        // Statusni avtomatik belgilash
+        Status status = isTechnicalOrATM ? Status.PENDING : Status.ACTIVE;
+
         Bino bino = null;
         if (dto.getBinoId() != null) {
             bino = binoRepo.findById(dto.getBinoId())
                     .orElseThrow(() -> new RuntimeException("Bino not found with id: " + dto.getBinoId()));
         }
+
         Users user = Users.builder()
                 .firstName(dto.getFirstName())
                 .lastName(dto.getLastName())
                 .department(dto.getDepartment())
                 .position(dto.getPosition())
                 .username(dto.getUsername())
+                .phoneNumber(dto.getPhoneNumber())
                 .password(passwordEncoder.encode(dto.getPassword()))
-
                 .status(status.name())
-                .bino(bino) // ✅ Bino ni set qilish
-
+                .bino(bino)
                 .build();
 
         userRepo.save(user);
@@ -106,6 +125,28 @@ public class AuthServiceImpl implements AuthService {
         response.put("message", "Foydalanuvchi muvaffaqiyatli ro'yxatdan o'tdi!");
         response.put("status", status.name());
         response.put("requiresApproval", status == Status.PENDING);
+
+        // ✅ Boshqa bo'limlar uchun TOKEN qaytarish (avtomatik login)
+        if (!isTechnicalOrATM) {
+            String accessToken = jwtService.generateJwtToken(user);
+            String refreshToken = jwtService.generateRefreshToken(user);
+
+            response.put("access_token", accessToken);
+            response.put("refresh_token", refreshToken);
+            response.put("user", Map.of(
+                    "id", user.getUuid(),
+                    "firstName", user.getFirstName(),
+                    "lastName", user.getLastName(),
+                    "username", user.getUsername(),
+                    "department", user.getDepartment(),
+                    "position", user.getPosition(),
+                    "status", user.getStatus()
+            ));
+            response.put("autoGenerated", true);
+            response.put("generatedUsername", dto.getUsername());
+            response.put("generatedPassword", "123456");
+            response.put("autoLogin", true);
+        }
 
         return ResponseEntity.ok(response);
     }
